@@ -34,6 +34,9 @@ tartan_drive:
 go_stanford:
   metric_waypoint_spacing: 0.12
 
+nomad_us:
+  metric_waypoint_spacing: 0.12 # No idea about this
+
 # private datasets:
 cory_hall:
   metric_waypoint_spacing: 0.06

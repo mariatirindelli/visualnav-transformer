@@ -279,6 +279,8 @@ class ViNT_Dataset(Dataset):
         else:
             with open(os.path.join(self.data_folder, trajectory_name, "traj_data.pkl"), "rb") as f:
                 traj_data = pickle.load(f)
+            for k in traj_data.keys():
+                traj_data[k] = traj_data[k].astype(np.float32)
             self.trajectory_cache[trajectory_name] = traj_data
             return traj_data
 
@@ -341,7 +343,7 @@ class ViNT_Dataset(Dataset):
             distance = (goal_time - curr_time) // self.waypoint_spacing
             assert (goal_time - curr_time) % self.waypoint_spacing == 0, f"{goal_time} and {curr_time} should be separated by an integer multiple of {self.waypoint_spacing}"
         
-        actions_torch = torch.as_tensor(actions, dtype=torch.float32)
+        actions_torch = torch.as_tensor(actions.astype(np.float32), dtype=torch.float32)
         if self.learn_angle:
             actions_torch = calculate_sin_cos(actions_torch)
         

@@ -14,7 +14,7 @@ dependencies:
   - torchvision
   - tqdm==4.64.0
   - git+https://github.com/ildoonet/pytorch-gradual-warmup-lr.git
-  - opencv-python==4.6.0.66
+  - opencv-python-headless==4.6.0.66
   - h5py==3.6.0
   - wandb==0.12.18
   - --extra-index-url https://rospypi.github.io/simple/ 

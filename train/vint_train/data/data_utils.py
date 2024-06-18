@@ -131,5 +131,5 @@ def img_path_to_data(path: Union[str, io.BytesIO], image_resize_size: Tuple[int,
         torch.Tensor: resized image as tensor
     """
     # return transform_images(Image.open(path), transform, image_resize_size, aspect_ratio)
-    return resize_and_aspect_crop(Image.open(path), image_resize_size)    
+    return resize_and_aspect_crop(Image.open(path).convert("RGB"), image_resize_size)
 

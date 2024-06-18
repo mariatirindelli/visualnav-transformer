@@ -365,7 +365,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    with open("config/defaults.yaml", "r") as f:
+    with open("./config/defaults.yaml", "r") as f:
         default_config = yaml.safe_load(f)
 
     config = default_config
@@ -390,7 +390,6 @@ if __name__ == "__main__":
         wandb.init(
             project=config["project_name"],
             settings=wandb.Settings(start_method="fork"),
-            entity="gnmv2", # TODO: change this to your wandb entity
         )
         wandb.save(args.config, policy="now")  # save the config file
         wandb.run.name = config["run_name"]
