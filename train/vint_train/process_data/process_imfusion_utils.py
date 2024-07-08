@@ -4,7 +4,10 @@ import argparse
 import pickle as pkl
 import os
 from pyquaternion import Quaternion
-
+import numpy as np
+from typing import Any, Tuple, List, Dict
+from scipy.spatial.transform import Rotation as R
+from PIL import Image
 
 def load_imf_us(file_path):
 
@@ -23,11 +26,64 @@ def load_imf_us(file_path):
 
     return return_list 
         
-   
+# TODO: add eventual processing of the image
+
+# PROCESS_IMAGES_FUNCTIONS
+def dummy_image_proc(image):
+    return image
+ 
+def convert_to_PIL(imf_image):
+    img_array = np.squeeze(np.array(imf_image))
+    return Image.fromarray(img_array)
+
+# PROCESS ODOM FUNCTIONS
+def nav_to_xyz_angles(traj)-> Dict[np.ndarray, np.ndarray]:
+    position = traj[0:3, 3]
+    xyz_angles = R.from_matrix(traj[0:3, 0:3]).as_euler("xyz", degrees=True)
+    return position, np.array(xyz_angles)
+
+# -----------------------------------------
+def process_odom(
+    traj_list: List,
+    odom_process_func: Any,
+) -> Dict[np.ndarray, np.ndarray]:
+    """
+    Process odom data from a topic that publishes nav_msgs/Odometry into position and yaw
+    """
+    xyz_positions = []
+    xyz_angles = []
+    for traj in traj_list:
+        pos, angles = odom_process_func(traj)
+        xyz_positions.append(pos)
+        xyz_angles.append(angles)
+    return {"position": np.array(xyz_positions), "xyz_angles": np.array(xyz_angles)}
+
+def process_images(im_list: List, img_process_func) -> List:
+    """
+    Process image data from a topic that publishes ros images into a list of PIL images
+    """
+    images = []
+    for img_msg in im_list:
+        img = img_process_func(img_msg)
+        images.append(img)
+    return images
+
+
+# equivalent to filter_backword, to split the trajectory into small chunks to avoid things like bacword motions or i.e. in case of US it could be
+# decoupling from skin or sudden motions
+def filter_and_cut( img_list: List[Image.Image],
+    traj_data: Dict[str, np.ndarray],
+    start_slack: int = 0,
+    end_slack: int = 0,
+) -> Tuple[List[np.ndarray], List[int]]:
+    
+    # dummy function, not doing anything
+    return [(img_list, traj_data)]
+
 
 
 def get_images_and_trajectories(
-    imfusion_data,
+    tracked_img : imfusion.TrackedSharedImageSet,
     config
 ):
     """
@@ -45,146 +101,23 @@ def get_images_and_trajectories(
         img_data (list): list of PIL images
         traj_data (list): list of odom data
     """
-
-    imfusion_data = imfusion.load(imfusion_file_path)
         
-    if (len(imfusion_data) == 0):
-        print("File: ", imfusion_data, " empty")
-        return [], []
+    if (len(tracked_img) == 0):
+        print("File: ", tracked_img, " empty")
+        return []
         
-        
-    for us in imfusion_data:
-        if not isinstance(us, imfusion.TrackedSharedImageSet):
-            continue
-        traj = extract_trajectory_from_file()
+    trajs = []
+    imgs = []
+    for i in range(tracked_img.size):
+        mat = tracked_img.matrix(i)
+        img = tracked_img[i]
+        imgs.append(img)
+        trajs.append(mat)
 
-
-
-
-    # check if bag has both topics
-    odomtopic = None
-    imtopic = None
-    if type(imtopics) == str:
-        imtopic = imtopics
-    else:
-        for imt in imtopics:
-            if bag.get_message_count(imt) > 0:
-                imtopic = imt
-                break
-    if type(odomtopics) == str:
-        odomtopic = odomtopics
-    else:
-        for ot in odomtopics:
-            if bag.get_message_count(ot) > 0:
-                odomtopic = ot
-                break
-    if not (imtopic and odomtopic):
-        # bag doesn't have both topics
-        return None, None
-
-    synced_imdata = []
-    synced_odomdata = []
-    # get start time of bag in seconds
-    currtime = bag.get_start_time()
-
-    curr_imdata = None
-    curr_odomdata = None
-
-    for topic, msg, t in bag.read_messages(topics=[imtopic, odomtopic]):
-        if topic == imtopic:
-            curr_imdata = msg
-        elif topic == odomtopic:
-            curr_odomdata = msg
-        if (t.to_sec() - currtime) >= 1.0 / rate:
-            if curr_imdata is not None and curr_odomdata is not None:
-                synced_imdata.append(curr_imdata)
-                synced_odomdata.append(curr_odomdata)
-                currtime = t.to_sec()
-
-    img_data = process_images(synced_imdata, img_process_func)
+    img_data = process_images(imgs, convert_to_PIL)
     traj_data = process_odom(
-        synced_odomdata,
-        odom_process_func,
-        ang_offset=ang_offset,
+        trajs,
+        nav_to_xyz_angles,
     )
 
     return img_data, traj_data
-
-
-
-
-
-
-
-
-def find_imf_files(root_folder):
-    imf_files = []
-
-    for dirpath, dirnames, filenames in os.walk(root_folder):
-        for filename in filenames:
-            if filename.endswith('.imf'):
-                absolute_path = os.path.abspath(os.path.join(dirpath, filename))
-                imf_files.append(absolute_path)
-    
-    return imf_files
-
-def get_file_paths(folder_path):
-    
-    # TODO: return the list of file paths
-    return []
-
-
-def save_to_pkl(file_path, file_content):
-    pkl.dump(file_content, file_path)
-
-def extract_trajectory_from_file(trackedImage : imfusion.TrackedSharedImageSet):
-    
-    for i in range(trackedImage.size()):
-        mat = trackedImage.matrix()
-    return None
-
-
-def run(input_folder):
-    imf_files = find_imf_files(input_folder)
-    for item in imf_files:
-        imfusion_data = imfusion.load(item)
-        
-        if (len(imfusion_data) == 0):
-            print("File: ", item, " empty")
-            continue
-        
-        data = imfusion.Data()
-        data.kind
-        for us in imfusion_data:
-            if not isinstance(us, imfusion.TrackedSharedImageSet):
-                continue
-            traj = extract_trajectory_from_file()
-            
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="A simple example script.")
-    
-    # Adding arguments
-    parser.add_argument(
-        '-i', '--input',
-        type=str,
-        required=True,
-        help='Path to the input folder'
-    )
-    
-    parser.add_argument(
-        '-o', '--output',
-        type=str,
-        required=True,
-        help='Path to the output folder'
-    )
-    
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Increase output verbosity'
-    )
-
-    args = parser.parse_args()
-    

@@ -36,6 +36,10 @@ def main(args: argparse.Namespace):
     counter = 0
     # processing loop
     for imfusion_file in imfusion_files:
+        
+        # TODO: remove this
+        if "US" not in imfusion_file:
+            continue
 
         for (i, data) in enumerate(load_imf_us(imfusion_file)):
         
@@ -49,9 +53,7 @@ def main(args: argparse.Namespace):
             )
 
             # TODO: understand what to add to filter backwards
-            # cut_trajs = filter_backwards(bag_img_data, bag_traj_data) # remove backwards movement
-
-            cut_trajs = zip(imfusion_img_data, imfusion_traj_data)
+            cut_trajs = filter_and_cut(imfusion_img_data, imfusion_traj_data) # remove backwards movement
 
             for i, (img_data_i, traj_data_i) in enumerate(cut_trajs):
                 traj_name_i = traj_name + f"_{i}"
