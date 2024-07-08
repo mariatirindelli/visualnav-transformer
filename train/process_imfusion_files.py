@@ -22,15 +22,22 @@ def main(args: argparse.Namespace):
     imfusion_files = []
     for root, _, files in os.walk(args.input_dir):
         for file in files:
-            if file.endswith(".bag"):
+            if file.endswith(".imf"):
                 imfusion_files.append(os.path.join(root, file))
-    if args.num_trajs >= 0:
-        imfusion_files = imfusion_files[: args.num_trajs]
 
+        # TODO: remove this
+        if len(imfusion_files) > 10:
+            break
+
+    #if args.num_trajs >= 0:
+    #    imfusion_files = imfusion_files[: args.num_trajs]
+
+
+    counter = 0
     # processing loop
     for imfusion_file in imfusion_files:
 
-        for (i, data) in enumerate(load_imf_us(imfusion_files)):
+        for (i, data) in enumerate(load_imf_us(imfusion_file)):
         
             # name is that folders separated by _ and then the last part of the path
             traj_name = "_".join(imfusion_file.split("/")[-2:])[:-4] + str(i)
@@ -58,6 +65,10 @@ def main(args: argparse.Namespace):
                 for i, img in enumerate(img_data_i):
                     img.save(os.path.join(traj_folder_i, f"{i}.jpg"))
 
+                counter += 1
+                if (counter > args.num_trajs):
+                    return
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -75,7 +86,7 @@ if __name__ == "__main__":
         "--input-dir",
         "-i",
         type=str,
-        help="path of the datasets with rosbags",
+        help="path of the datasets with imfusion files",
         required=True,
     )
     parser.add_argument(
